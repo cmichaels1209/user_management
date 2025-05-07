@@ -278,3 +278,32 @@ async def update_own_profile(user_update: UserUpdate, db: AsyncSession = Depends
         links=create_user_links(updated_user.id, request)
     )
 
+@router.put("/users/{user_id}/upgrade-professional", response_model=UserResponse, tags=["User Profile Management (Admin/Manager Only)"])
+async def upgrade_user_to_professional(user_id: UUID, db: AsyncSession = Depends(get_db), current_user: dict = Depends(require_role(["ADMIN", "MANAGER"]))):
+    """
+    Allow admins or managers to upgrade a user's professional status.
+
+    - **user_id**: UUID of the user to upgrade.
+    """
+    user = await UserService.get_by_id(db, user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    # Upgrade the user to professional status
+    user.update_professional_status(True)
+    await db.commit()
+    return UserResponse.model_construct(
+        id=user.id,
+        nickname=user.nickname,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        bio=user.bio,
+        profile_picture_url=user.profile_picture_url,
+        location=user.location,
+        email=user.email,
+        role=user.role,
+        last_login_at=user.last_login_at,
+        created_at=user.created_at,
+        updated_at=user.updated_at,
+        links=create_user_links(user.id, request)
+    )
