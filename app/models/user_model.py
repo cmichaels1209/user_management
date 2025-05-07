@@ -20,7 +20,7 @@ class User(Base):
     """
     Represents a user within the application, corresponding to the 'users' table in the database.
     This class uses SQLAlchemy ORM for mapping attributes to database columns efficiently.
-    
+
     Attributes:
         id (UUID): Unique identifier for the user.
         nickname (str): Unique nickname for privacy, required.
@@ -59,6 +59,7 @@ class User(Base):
     first_name: Mapped[str] = Column(String(100), nullable=True)
     last_name: Mapped[str] = Column(String(100), nullable=True)
     bio: Mapped[str] = Column(String(500), nullable=True)
+    location = Column(String, nullable=True)
     profile_picture_url: Mapped[str] = Column(String(255), nullable=True)
     linkedin_profile_url: Mapped[str] = Column(String(255), nullable=True)
     github_profile_url: Mapped[str] = Column(String(255), nullable=True)
