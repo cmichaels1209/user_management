@@ -65,7 +65,7 @@ class UserService:
             new_user.nickname = new_nickname
             logger.info(f"User Role: {new_user.role}")
             user_count = await cls.count(session)
-            new_user.role = UserRole.ADMIN if user_count == 0 else UserRole.ANONYMOUS            
+            new_user.role = UserRole.ADMIN if user_count == 0 else UserRole.ANONYMOUS
             if new_user.role == UserRole.ADMIN:
                 new_user.email_verified = True
 
@@ -121,7 +121,7 @@ class UserService:
     @classmethod
     async def register_user(cls, session: AsyncSession, user_data: Dict[str, str], get_email_service) -> Optional[User]:
         return await cls.create(session, user_data, get_email_service)
-    
+
 
     @classmethod
     async def login_user(cls, session: AsyncSession, email: str, password: str) -> Optional[User]:
@@ -188,7 +188,7 @@ class UserService:
         result = await session.execute(query)
         count = result.scalar()
         return count
-    
+
     @classmethod
     async def unlock_user_account(cls, session: AsyncSession, user_id: UUID) -> bool:
         user = await cls.get_by_id(session, user_id)
@@ -199,3 +199,42 @@ class UserService:
             await session.commit()
             return True
         return False
+
+    @classmethod
+    async def update_profile(cls, session: AsyncSession, user: User, updates: UserUpdate) -> Optional[User]:
+        """
+        Update the user's profile fields such as name, bio, and location.
+        """
+        try:
+            for field, value in updates.model_dump(exclude_unset=True).items():
+                setattr(user, field, value)
+            session.add(user)
+            await session.commit()
+            await session.refresh(user)
+            logger.info(f"Updated profile for user {user.id}")
+            return user
+        except Exception as e:
+            logger.error(f"Failed to update user profile: {e}")
+            await session.rollback()
+            return None
+
+    @classmethod
+    async def upgrade_to_professional(cls, session: AsyncSession, user_id: UUID) -> Optional[User]:
+        """
+        Upgrade a user to professional status. Requires admin or manager privileges.
+        """
+        try:
+            user = await cls.get_by_id(session, user_id)
+            if user:
+                user.is_professional = True
+                session.add(user)
+                await session.commit()
+                await session.refresh(user)
+                logger.info(f"User {user_id} upgraded to professional.")
+                return user
+            else:
+                logger.warning(f"User {user_id} not found for upgrade.")
+        except Exception as e:
+            logger.error(f"Error upgrading user to professional: {e}")
+            await session.rollback()
+        return None
