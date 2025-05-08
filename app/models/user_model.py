@@ -58,6 +58,7 @@ class User(Base):
 
 
 
+
     @validates('email')
     def validate_email(self, key, email):
         """Ensures that the email follows proper format."""

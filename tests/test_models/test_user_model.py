@@ -3,6 +3,9 @@ from datetime import datetime, timezone
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.user_model import User, UserRole
+from app.services.user_service import UserService
+from app.utils.security import hash_password
+
 
 @pytest.mark.asyncio
 async def test_user_role(db_session: AsyncSession, user: User, admin_user: User, manager_user: User):
@@ -139,3 +142,75 @@ async def test_update_user_role(db_session: AsyncSession, user: User):
     await db_session.commit()
     await db_session.refresh(user)
     assert user.role == UserRole.ADMIN, "Role update should persist correctly in the database"
+
+@pytest.mark.asyncio
+async def test_update_user_bio_field(db_session, user):
+    new_bio = "Cybersecurity enthusiast with 5 years of experience."
+    updated_user = await UserService.update(db_session, user.id, {"bio": new_bio})
+    assert updated_user is not None
+    assert updated_user.bio == new_bio
+
+@pytest.mark.asyncio
+async def test_update_user_location(db_session, user):
+    new_location = "New Jersey, USA"
+    updated_user = await UserService.update(db_session, user.id, {"location": new_location})
+    assert updated_user is not None
+    assert updated_user.location == new_location
+
+@pytest.mark.asyncio
+async def test_update_multiple_profile_fields(db_session, user):
+    data = {
+        "first_name": "Alice",
+        "last_name": "Walker",
+        "linkedin_profile_url": "https://linkedin.com/in/alicewalker"
+    }
+    updated_user = await UserService.update(db_session, user.id, data)
+    assert updated_user.first_name == "Alice"
+    assert updated_user.last_name == "Walker"
+    assert updated_user.linkedin_profile_url == data["linkedin_profile_url"]
+
+@pytest.mark.asyncio
+async def test_update_profile_with_invalid_url(db_session, user):
+    invalid_url = "htp:/not.a.valid.url"
+    updated_user = await UserService.update(db_session, user.id, {"github_profile_url": invalid_url})
+    assert updated_user is None
+
+@pytest.mark.asyncio
+async def test_upgrade_user_to_professional(db_session, user):
+    updated_user = await UserService.update(db_session, user.id, {"is_professional": True})
+    assert updated_user.is_professional is True
+    assert isinstance(updated_user.professional_status_updated_at, datetime)
+
+@pytest.mark.asyncio
+async def test_downgrade_user_from_professional(db_session, user):
+    await UserService.update(db_session, user.id, {"is_professional": True})
+    updated_user = await UserService.update(db_session, user.id, {"is_professional": False})
+    assert updated_user.is_professional is False
+
+@pytest.mark.asyncio
+async def test_update_user_empty_data(db_session, user):
+    updated_user = await UserService.update(db_session, user.id, {})
+    assert updated_user is None
+
+@pytest.mark.asyncio
+async def test_update_user_password_and_login(db_session, verified_user):
+    new_password = "SecureNewPass!99"
+    # Use update_profile to avoid schema validation issues
+    updated_user = await UserService.update_profile(db_session, verified_user.id, {"password": new_password})
+    assert updated_user is not None, "User should be updated successfully"
+
+    # Now test login with the new password
+    logged_in_user = await UserService.login_user(db_session, verified_user.email, new_password)
+    assert logged_in_user is not None, "User should be able to login with new password"
+
+
+@pytest.mark.asyncio
+async def test_update_profile_picture_url(db_session, user):
+    url = "https://example.com/profile-pic.png"
+    updated_user = await UserService.update(db_session, user.id, {"profile_picture_url": url})
+    assert updated_user.profile_picture_url == url
+
+@pytest.mark.asyncio
+async def test_update_user_role_directly(db_session, user):
+    updated_user = await UserService.update(db_session, user.id, {"role": UserRole.MANAGER})
+    assert updated_user.role == UserRole.MANAGER

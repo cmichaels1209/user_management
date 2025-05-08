@@ -124,6 +124,7 @@ async def user(db_session):
     user = User(**user_data)
     db_session.add(user)
     await db_session.commit()
+    await db_session.refresh(user)  # ✅ Ensures all DB-generated fields are present
     return user
 
 @pytest.fixture(scope="function")
@@ -141,6 +142,7 @@ async def verified_user(db_session):
     user = User(**user_data)
     db_session.add(user)
     await db_session.commit()
+    await db_session.refresh(user)  # ✅ Ensures all DB-generated fields are present
     return user
 
 @pytest.fixture(scope="function")
@@ -158,6 +160,7 @@ async def unverified_user(db_session):
     user = User(**user_data)
     db_session.add(user)
     await db_session.commit()
+    await db_session.refresh(user)  # ✅ Ensures all DB-generated fields are present
     return user
 
 @pytest.fixture(scope="function")
@@ -187,7 +190,7 @@ async def admin_user(db_session: AsyncSession):
         email="admin@example.com",
         first_name="John",
         last_name="Doe",
-        hashed_password="securepassword",
+        hashed_password=hash_password("securepassword"),
         role=UserRole.ADMIN,
         is_locked=False,
     )
@@ -202,7 +205,7 @@ async def manager_user(db_session: AsyncSession):
         first_name="John",
         last_name="Doe",
         email="manager_user@example.com",
-        hashed_password="securepassword",
+        hashed_password=hash_password("securepassword"),
         role=UserRole.MANAGER,
         is_locked=False,
     )
@@ -212,18 +215,18 @@ async def manager_user(db_session: AsyncSession):
 
 # Configure a fixture for each type of user role you want to test
 @pytest.fixture(scope="function")
-def admin_token(admin_user):
+async def admin_token(admin_user):
     # Assuming admin_user has an 'id' and 'role' attribute
     token_data = {"sub": str(admin_user.id), "role": admin_user.role.name}
     return create_access_token(data=token_data, expires_delta=timedelta(minutes=30))
 
 @pytest.fixture(scope="function")
-def manager_token(manager_user):
+async def manager_token(manager_user):
     token_data = {"sub": str(manager_user.id), "role": manager_user.role.name}
     return create_access_token(data=token_data, expires_delta=timedelta(minutes=30))
 
 @pytest.fixture(scope="function")
-def user_token(user):
+async def user_token(user):
     token_data = {"sub": str(user.id), "role": user.role.name}
     return create_access_token(data=token_data, expires_delta=timedelta(minutes=30))
 

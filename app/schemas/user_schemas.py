@@ -50,15 +50,19 @@ class UserUpdate(UserBase):
     linkedin_profile_url: Optional[str] = None
     github_profile_url: Optional[str] = None
     location: Optional[str] = None
-    password: Optional[str] = None  # Include password if it's to be updated
+    password: Optional[str] = Field(None, example="SecureNewPass!99") # Include password if it's to be updated
     role: Optional[UserRole] = None  # Optional in case we don't want to change the role during update
+    is_professional: Optional[bool] = None  # ✅ Add this line
 
 
     @root_validator(pre=True)
     def check_at_least_one_value(cls, values):
-        if not any(values.values()):
+        if not any(v is not None for v in values.values()):
             raise ValueError("At least one field must be provided for update")
         return values
+
+    class Config:
+        from_attributes = True
 
 
 class UserResponse(UserBase):

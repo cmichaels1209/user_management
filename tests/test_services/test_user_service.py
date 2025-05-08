@@ -7,6 +7,7 @@ from app.services.user_service import UserService
 from app.utils.nickname_gen import generate_nickname
 
 
+
 pytestmark = pytest.mark.asyncio
 
 
