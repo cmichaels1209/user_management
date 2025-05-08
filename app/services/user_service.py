@@ -226,4 +226,22 @@ class UserService:
             logger.error(f"Error during profile update: {e}")
             return None
 
+    @classmethod
+    async def update_professional_status(cls, session: AsyncSession, user_id: UUID, status: bool) -> Optional[User]:
+        try:
+            query = update(User).where(User.id == user_id).values(is_professional=status, professional_status_updated_at=datetime.now(timezone.utc))
+            await cls._execute_query(session, query)
+
+            # Fetch the updated user to return
+            updated_user = await cls.get_by_id(session, user_id)
+            if updated_user:
+                session.refresh(updated_user)
+                logger.info(f"User {user_id} professional status updated successfully.")
+                return updated_user
+            else:
+                logger.error(f"User {user_id} not found after professional status update attempt.")
+            return None
+        except Exception as e:
+            logger.error(f"Error during professional status update: {e}")
+            return None
 
