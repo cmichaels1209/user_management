@@ -88,6 +88,7 @@ class UserUpdate(BaseModel):
     bio: Optional[str] = None
     profile_picture_url: Optional[str] = None
     location: Optional[str] = None
+    password: Optional[str] = None  # Include password if it's to be updated
 
     class Config:
         orm_mode = True
