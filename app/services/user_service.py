@@ -124,6 +124,7 @@ class UserService:
         await session.commit()
         return True
 
+
     @classmethod
     async def list_users(cls, session: AsyncSession, skip: int = 0, limit: int = 10) -> List[User]:
         query = select(User).offset(skip).limit(limit)

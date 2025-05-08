@@ -5,12 +5,11 @@ from app.database import Database
 from app.utils.template_manager import TemplateManager
 from app.services.email_service import EmailService
 from settings.config import Settings
-from fastapi import Depends
 from app.services.jwt_service import decode_token
+from app.models.user_model import UserRole
 
-
-# Remove unnecessary imports (these aren't needed)
-# from builtins import Exception, dict, str
+# Import the User class here to fix the NameError
+from app.models.user_model import User  # <-- Add this import to resolve the NameError
 
 def get_settings() -> Settings:
     """Return application settings."""
@@ -52,6 +51,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
     user_id: str = payload.get("sub")
     user_role: str = payload.get("role")
 
+    print(f"Decoded token: {payload}")  # Debugging: Add this for debugging
+
     if user_id is None or user_role is None:
         raise credentials_exception
 
@@ -65,13 +66,16 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
 
     return user
 
+
 def require_role(roles: list):
     """
     Dependency that checks if the current user has one of the required roles.
     If the user does not have the required role, a 403 error is raised.
     """
-    def role_checker(current_user: dict = Depends(get_current_user)):
-        if current_user.role not in roles:
+    def role_checker(current_user: User = Depends(get_current_user)):  # Ensure current_user is typed as User
+        print(f"User Role: {current_user.role}")  # Debugging line
+        allowed_roles = [UserRole[role] for role in roles]  # Convert strings to UserRole enum values
+        if current_user.role not in allowed_roles:  # Compare Enum values
             raise HTTPException(status_code=403, detail="Operation not permitted")
         return current_user
     return role_checker
