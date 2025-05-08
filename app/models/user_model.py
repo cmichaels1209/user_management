@@ -1,14 +1,18 @@
 from builtins import bool, int, str
 from typing import Optional
 from datetime import datetime
-from enum import Enum
 import uuid
 from sqlalchemy import (
-    Column, String, Integer, DateTime, Boolean, func, Enum as SQLAlchemyEnum
+    Column, String, Integer, DateTime, Boolean, func
 )
 from sqlalchemy.dialects.postgresql import UUID, ENUM
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, validates
 from app.database import Base
+from enum import Enum
+from urllib.parse import urlparse
+
+
+
 
 class UserRole(Enum):
     """Enumeration of user roles within the application, stored as ENUM in the database."""
@@ -19,42 +23,15 @@ class UserRole(Enum):
 
 
 
+
 class User(Base):
     """
     Represents a user within the application, corresponding to the 'users' table in the database.
     This class uses SQLAlchemy ORM for mapping attributes to database columns efficiently.
-
-    Attributes:
-        id (UUID): Unique identifier for the user.
-        nickname (str): Unique nickname for privacy, required.
-        email (str): Unique email address, required.
-        email_verified (bool): Flag indicating if the email has been verified.
-        hashed_password (str): Hashed password for security, required.
-        first_name (str): Optional first name of the user.
-        last_name (str): Optional first name of the user.
-
-        bio (str): Optional biographical information.
-        profile_picture_url (str): Optional URL to a profile picture.
-        linkedin_profile_url (str): Optional LinkedIn profile URL.
-        github_profile_url (str): Optional GitHub profile URL.
-        role (UserRole): Role of the user within the application.
-        is_professional (bool): Flag indicating professional status.
-        professional_status_updated_at (datetime): Timestamp of last professional status update.
-        last_login_at (datetime): Timestamp of the last login.
-        failed_login_attempts (int): Count of failed login attempts.
-        is_locked (bool): Flag indicating if the account is locked.
-        created_at (datetime): Timestamp when the user was created, set by the server.
-        updated_at (datetime): Timestamp of the last update, set by the server.
-
-    Methods:
-        lock_account(): Locks the user account.
-        unlock_account(): Unlocks the user account.
-        verify_email(): Marks the user's email as verified.
-        has_role(role_name): Checks if the user has a specified role.
-        update_professional_status(status): Updates the professional status and logs the update time.
     """
     __tablename__ = "users"
     __mapper_args__ = {"eager_defaults": True}
+
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     nickname: Mapped[str] = Column(String(50), unique=True, nullable=False, index=True)
@@ -65,8 +42,8 @@ class User(Base):
     profile_picture_url: Mapped[str] = Column(String(255), nullable=True)
     linkedin_profile_url: Mapped[str] = Column(String(255), nullable=True)
     github_profile_url: Mapped[str] = Column(String(255), nullable=True)
-    location: Mapped[Optional[str]] = Column(String(255), nullable=True)  # Add location field
-    role: Mapped[UserRole] = Column(SQLAlchemyEnum(UserRole, name='UserRole', create_constraint=True), nullable=False)
+    location: Mapped[Optional[str]] = Column(String(255), nullable=True)
+    role: Mapped[UserRole] = Column(ENUM(UserRole, name='UserRole', create_constraint=True), nullable=False)
     is_professional: Mapped[bool] = Column(Boolean, default=False)
     professional_status_updated_at: Mapped[datetime] = Column(DateTime(timezone=True), nullable=True)
     last_login_at: Mapped[datetime] = Column(DateTime(timezone=True), nullable=True)
@@ -79,38 +56,74 @@ class User(Base):
     hashed_password: Mapped[str] = Column(String(255), nullable=False)
 
 
+
+
+    @validates('email')
+    def validate_email(self, key, email):
+        """Ensures that the email follows proper format."""
+        if '@' not in email:
+            raise ValueError("Invalid email format")
+        return email
+
+
+    @validates('github_profile_url', 'linkedin_profile_url')
+    def validate_url(self, key, url):
+        """Validates that profile URLs are valid if provided."""
+        if url and not (url.startswith('http://') or url.startswith('https://')):
+            raise ValueError(f"Invalid URL format for {key}")
+        return str(url) if url else url  # Convert URL to string
+
+
     def __repr__(self) -> str:
         """Provides a readable representation of a user object."""
         return f"<User {self.nickname}, Role: {self.role.name}>"
 
+
     # Method for updating profile information
-    def update_profile(self, first_name: str, last_name: str, bio: str, profile_picture_url: str, location: Optional[str] = None):
+    def update_profile(self, first_name: str, last_name: str, bio: str, profile_picture_url: str, location: Optional[str] = None, linkedin_profile_url: Optional[str] = None, github_profile_url: Optional[str] = None):
         """Updates user profile fields."""
+        # Update basic profile fields
         self.first_name = first_name
         self.last_name = last_name
         self.bio = bio
         self.profile_picture_url = profile_picture_url
+
+
+        # Convert profile URLs to strings (if provided)
+        if linkedin_profile_url:
+            self.linkedin_profile_url = str(linkedin_profile_url)
+        if github_profile_url:
+            self.github_profile_url = str(github_profile_url)
+
+
+        # Update location if provided
         if location:
             self.location = location
-        self.updated_at = func.now()  # Ensure updated_at is refreshed
 
-    # Method to update professional status (already present)
-    def update_professional_status(self, status: bool):
-        """Updates the professional status and logs the update time."""
-        self.is_professional = status
-        self.professional_status_updated_at = func.now()
+
+        # Ensure the updated_at timestamp is refreshed
+        self.updated_at = func.now()
+
 
     def lock_account(self):
+        """Locks the user account."""
         self.is_locked = True
 
+
     def unlock_account(self):
+        """Unlocks the user account."""
         self.is_locked = False
 
+
     def verify_email(self):
+        """Marks the user's email as verified."""
         self.email_verified = True
 
+
     def has_role(self, role_name: UserRole) -> bool:
+        """Checks if the user has a specified role."""
         return self.role == role_name
+
 
     def update_professional_status(self, status: bool):
         """Updates the professional status and logs the update time."""

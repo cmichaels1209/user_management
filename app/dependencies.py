@@ -8,17 +8,21 @@ from settings.config import Settings
 from app.services.jwt_service import decode_token
 from app.models.user_model import UserRole
 
+
 # Import the User class here to fix the NameError
 from app.models.user_model import User  # <-- Add this import to resolve the NameError
+
 
 def get_settings() -> Settings:
     """Return application settings."""
     return Settings()
 
+
 def get_email_service() -> EmailService:
     """Get the email service dependency."""
     template_manager = TemplateManager()
     return EmailService(template_manager=template_manager)
+
 
 async def get_db() -> AsyncSession:
     """Dependency that provides a database session for each request."""
@@ -29,8 +33,10 @@ async def get_db() -> AsyncSession:
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
+
 # OAuth2PasswordBearer is used to handle the OAuth2 password flow
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+
 
 async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)):
     """
@@ -43,28 +49,37 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
         headers={"WWW-Authenticate": "Bearer"},
     )
 
+
     # Decode the token to get user information
     payload = decode_token(token)
     if payload is None:
         raise credentials_exception
 
+
     user_id: str = payload.get("sub")
     user_role: str = payload.get("role")
 
+
     print(f"Decoded token: {payload}")  # Debugging: Add this for debugging
+
 
     if user_id is None or user_role is None:
         raise credentials_exception
 
+
     # Lazy import UserService here to avoid circular import issues
     from app.services.user_service import UserService  # Move import here to avoid circular import
+
 
     # Fetch the user from the database using UserService
     user = await UserService.get_by_id(db, user_id)
     if not user:
         raise credentials_exception
 
+
     return user
+
+
 
 
 def require_role(roles: list):
