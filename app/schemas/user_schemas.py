@@ -83,6 +83,7 @@ class UserListResponse(BaseModel):
     size: int = Field(..., example=10)
 
 class UserUpdate(BaseModel):
+    email: Optional[EmailStr] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     bio: Optional[str] = None

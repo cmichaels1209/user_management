@@ -71,7 +71,7 @@ def require_role(roles: list):
     If the user does not have the required role, a 403 error is raised.
     """
     def role_checker(current_user: dict = Depends(get_current_user)):
-        if current_user["role"] not in roles:
+        if current_user.role not in roles:
             raise HTTPException(status_code=403, detail="Operation not permitted")
         return current_user
     return role_checker
