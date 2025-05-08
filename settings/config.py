@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     # Discord configuration
     discord_bot_token: str = Field(default='NONE', description="Discord bot token")
     discord_channel_id: int = Field(default=1234567890, description="Default Discord channel ID for the bot to interact", example=1234567890)
-    #Open AI Key 
+    #Open AI Key
     openai_api_key: str = Field(default='NONE', description="Open AI Api Key")
     send_real_mail: bool = Field(default=False, description="use mock")
     # Email settings for Mailtrap

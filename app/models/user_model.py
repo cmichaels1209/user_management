@@ -1,4 +1,5 @@
 from builtins import bool, int, str
+from typing import Optional
 from datetime import datetime
 from enum import Enum
 import uuid
@@ -16,11 +17,13 @@ class UserRole(Enum):
     MANAGER = "MANAGER"
     ADMIN = "ADMIN"
 
+
+
 class User(Base):
     """
     Represents a user within the application, corresponding to the 'users' table in the database.
     This class uses SQLAlchemy ORM for mapping attributes to database columns efficiently.
-    
+
     Attributes:
         id (UUID): Unique identifier for the user.
         nickname (str): Unique nickname for privacy, required.
@@ -62,6 +65,7 @@ class User(Base):
     profile_picture_url: Mapped[str] = Column(String(255), nullable=True)
     linkedin_profile_url: Mapped[str] = Column(String(255), nullable=True)
     github_profile_url: Mapped[str] = Column(String(255), nullable=True)
+    location: Mapped[Optional[str]] = Column(String(255), nullable=True)  # Add location field
     role: Mapped[UserRole] = Column(SQLAlchemyEnum(UserRole, name='UserRole', create_constraint=True), nullable=False)
     is_professional: Mapped[bool] = Column(Boolean, default=False)
     professional_status_updated_at: Mapped[datetime] = Column(DateTime(timezone=True), nullable=True)
@@ -78,6 +82,23 @@ class User(Base):
     def __repr__(self) -> str:
         """Provides a readable representation of a user object."""
         return f"<User {self.nickname}, Role: {self.role.name}>"
+
+    # Method for updating profile information
+    def update_profile(self, first_name: str, last_name: str, bio: str, profile_picture_url: str, location: Optional[str] = None):
+        """Updates user profile fields."""
+        self.first_name = first_name
+        self.last_name = last_name
+        self.bio = bio
+        self.profile_picture_url = profile_picture_url
+        if location:
+            self.location = location
+        self.updated_at = func.now()  # Ensure updated_at is refreshed
+
+    # Method to update professional status (already present)
+    def update_professional_status(self, status: bool):
+        """Updates the professional status and logs the update time."""
+        self.is_professional = status
+        self.professional_status_updated_at = func.now()
 
     def lock_account(self):
         self.is_locked = True
